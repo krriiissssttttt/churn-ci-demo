@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Show version
+        run: echo "this job copy is for Python ${{ matrix.python-version }}"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: python -m pytest -q
+
+  train:                      # job id: train
+    runs-on: ubuntu-latest
+    needs: test                # only run if the test job succeeded
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Build the dataset
+        run: python src/make_data.py
+      - name: Train and evaluate
+        run: python src/train_eval.py
+      - name: Quality gate
+        run: python src/check_metrics.py --min-recall 0.45
